@@ -1,0 +1,51 @@
+[
+  {
+    "id": 1,
+    "name": "Saco de Batata 10kg",
+    "category": "Tubérculos",
+    "price": 45,
+    "icon": "🥔"
+  },
+  {
+    "id": 2,
+    "name": "Saco de Cebola 10kg",
+    "category": "Tubérculos",
+    "price": 38,
+    "icon": "🧅"
+  },
+  {
+    "id": 3,
+    "name": "Caixa de Banana 20kg",
+    "category": "Frutas",
+    "price": 65,
+    "icon": "🍌"
+  },
+  {
+    "id": 4,
+    "name": "Caixa de Tomate",
+    "category": "Legumes",
+    "price": 55,
+    "icon": "🍅"
+  },
+  {
+    "id": 5,
+    "name": "Maço de Alface",
+    "category": "Folhas",
+    "price": 3.5,
+    "icon": "🥬"
+  },
+  {
+    "name": "Produto Permanente",
+    "category": "",
+    "price": 100,
+    "icon": "📦",
+    "id": 1777469602587
+  },
+  {
+    "name": "Saco de bosta",
+    "category": "teste",
+    "price": 975,
+    "icon": "📦",
+    "id": 1777469742556
+  }
+]
