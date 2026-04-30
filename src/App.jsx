@@ -437,7 +437,7 @@ function AdminView({ orders, autoPrintEnabled, setAutoPrintEnabled, printOrder }
             </span>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button 
-                onClick={toggleAutoPrint}
+                onClick={setAutoPrintEnabled}
                 className={`live-badge ${autoPrintEnabled ? '' : 'bg-slate-200 text-slate-500'}`}
                 style={{ cursor: 'pointer', border: 'none' }}
               >
