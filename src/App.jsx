@@ -86,7 +86,9 @@ const API_URL = window.location.hostname === 'localhost'
 const fetchProducts = async () => {
   try {
     const res = await fetch(`${API_URL}/products`);
-    return await res.json();
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
   } catch (e) {
     console.error("Erro ao carregar produtos:", e);
     return [];
