@@ -114,9 +114,15 @@ const saveOrderAPI = async (order) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(order)
     });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Erro desconhecido ao salvar pedido');
+    }
     return await res.json();
   } catch (e) {
     console.error("Erro ao salvar pedido:", e);
+    alert("Falha ao salvar pedido no banco: " + e.message);
+    return null;
   }
 };
 
@@ -215,11 +221,13 @@ function ClientView({ products, onOrderSubmitted }) {
 
     const savedOrder = await saveOrderAPI(orderData);
 
-    if (savedOrder) {
+    if (savedOrder && savedOrder.id) {
       setOrderId(savedOrder.id);
       setFullOrder(savedOrder);
       setSubmitted(true);
       onOrderSubmitted?.();
+    } else {
+      console.error("Pedido salvo mas sem ID ou erro no retorno:", savedOrder);
     }
   };
 

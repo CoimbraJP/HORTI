@@ -2,14 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 dotenv.config();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -20,11 +14,28 @@ app.use(express.json());
 // ── MONGODB CONNECTION ────────────────────────────────
 const MONGODB_URI = process.env.MONGODB_URI;
 
-// No Vercel, a conexão pode ser aberta em cada request ou mantida
-if (mongoose.connection.readyState === 0) {
-  mongoose.connect(MONGODB_URI)
-    .then(() => console.log('✅ Conectado ao MongoDB Atlas'))
-    .catch(err => console.error('❌ Erro ao conectar ao MongoDB:', err));
+let cachedConnection = null;
+
+async function connectToDatabase() {
+  if (cachedConnection && mongoose.connection.readyState === 1) {
+    return cachedConnection;
+  }
+  
+  if (!MONGODB_URI) {
+    throw new Error('MONGODB_URI não definida no ambiente.');
+  }
+
+  // Se já estiver conectando, aguarda
+  if (mongoose.connection.readyState === 2) {
+    return mongoose.connection;
+  }
+
+  console.log('🔄 Conectando ao MongoDB...');
+  cachedConnection = await mongoose.connect(MONGODB_URI);
+  console.log('✅ Conectado ao MongoDB Atlas');
+  
+  await seedDatabase();
+  return cachedConnection;
 }
 
 // ── SCHEMAS ──────────────────────────────────────────
@@ -53,7 +64,43 @@ const orderSchema = new mongoose.Schema({
 const Product = mongoose.models.Product || mongoose.model('Product', productSchema);
 const Order = mongoose.models.Order || mongoose.model('Order', orderSchema);
 
+// ── SEEDING ──────────────────────────────────────────
+async function seedDatabase() {
+  try {
+    const count = await Product.countDocuments();
+    if (count === 0) {
+      const defaultProducts = [
+        { id: 1, name: 'Saco de Batata 20kg', category: 'Legumes', price: 85.00, icon: '🥔' },
+        { id: 2, name: 'Caixa de Tomate', category: 'Legumes', price: 65.00, icon: '🍅' },
+        { id: 3, name: 'Saco de Cebola 20kg', category: 'Legumes', price: 45.00, icon: '🧅' }
+      ];
+      await Product.insertMany(defaultProducts);
+      console.log('🌱 Banco semeado com produtos padrão.');
+    }
+  } catch (e) {
+    console.error('⚠️ Erro ao semear banco:', e);
+  }
+}
+
+// ── MIDDLEWARE ───────────────────────────────────────
+app.use(async (req, res, next) => {
+  try {
+    await connectToDatabase();
+    next();
+  } catch (e) {
+    res.status(500).json({ error: 'Erro de conexão com o banco', details: e.message });
+  }
+});
+
 // ── API ROUTES ───────────────────────────────────────
+
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    env: !!MONGODB_URI
+  });
+});
 
 app.get('/api/products', async (req, res) => {
   try {
