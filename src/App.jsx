@@ -96,7 +96,9 @@ const fetchProducts = async () => {
 const fetchOrders = async () => {
   try {
     const res = await fetch(`${API_URL}/orders`);
-    return await res.json();
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
   } catch (e) {
     console.error("Erro ao carregar pedidos:", e);
     return [];
@@ -152,8 +154,10 @@ const deleteProductAPI = async (id) => {
 const formatCurrency = (v) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-const getInitials = (name) =>
-  name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+const getInitials = (name) => {
+  if (!name) return '??';
+  return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+};
 
 // Helper to parse "DD/MM/YYYY, HH:mm:ss"
 const parseOrderDate = (dateString) => {
@@ -422,9 +426,9 @@ function ClientView({ products, onOrderSubmitted }) {
 // ╔══════════════════════════════════════════════════╗
 // ║  ADMIN / CD VIEW                                 ║
 // ╚══════════════════════════════════════════════════╝
-function AdminView({ orders, autoPrintEnabled, setAutoPrintEnabled, printOrder }) {
-  const totalPending = orders.filter(o => !o.printed).length;
-  const totalValue   = orders.reduce((a, o) => a + (o.total || 0), 0);
+function AdminView({ orders = [], autoPrintEnabled, setAutoPrintEnabled, printOrder }) {
+  const totalPending = Array.isArray(orders) ? orders.filter(o => !o.printed).length : 0;
+  const totalValue   = Array.isArray(orders) ? orders.reduce((a, o) => a + (o.total || 0), 0) : 0;
 
   return (
     <div className="page">
@@ -819,8 +823,8 @@ function AdminLayout({ autoPrintEnabled, printOrder, loadAllOrders }) {
     const checkAndPrint = async () => {
       const currentOrders = await loadAllOrders();
 
-      if (autoPrintEnabled) {
-        const nextToPrint = [...currentOrders].reverse().find(o => !o.printed);
+      if (autoPrintEnabled && Array.isArray(currentOrders)) {
+        const nextToPrint = [...currentOrders].reverse().find(o => o && !o.printed);
         if (nextToPrint) {
           printOrder(nextToPrint);
         }
