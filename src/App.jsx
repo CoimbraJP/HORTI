@@ -437,7 +437,7 @@ function AdminView({ orders, autoPrintEnabled, setAutoPrintEnabled, printOrder }
             </span>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button 
-                onClick={() => setAutoPrintEnabled(!autoPrintEnabled)}
+                onClick={toggleAutoPrint}
                 className={`live-badge ${autoPrintEnabled ? '' : 'bg-slate-200 text-slate-500'}`}
                 style={{ cursor: 'pointer', border: 'none' }}
               >
@@ -886,23 +886,42 @@ function AdminLayout({ autoPrintEnabled, printOrder, loadAllOrders }) {
 export default function App() {
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
-  const [autoPrintEnabled, setAutoPrintEnabled] = useState(false);
+  const [autoPrintEnabled, setAutoPrintEnabled] = useState(() => {
+    return localStorage.getItem('autoPrint') === 'true';
+  });
 
-  const loadAllOrders = async () => {
+  const toggleAutoPrint = () => {
+    setAutoPrintEnabled(prev => {
+      const next = !prev;
+      localStorage.setItem('autoPrint', next);
+      return next;
+    });
+  };
+
+  const loadAllOrders = useCallback(async () => {
     const data = await fetchOrders();
     setOrders(data);
     return data;
-  };
+  }, []);
 
   const printOrder = useCallback(async (order) => {
     // Mark as printed immediately to avoid loops
     await updateOrderPrintedAPI(order.id, true);
     await loadAllOrders();
 
-    const win = window.open('', '_blank', 'width=400,height=600');
-    if (!win) {
-      console.warn('Pop-up bloqueado! Por favor, autorize pop-ups.');
-      return;
+    // Create hidden iframe for silent printing
+    let iframe = document.getElementById('print-iframe');
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.id = 'print-iframe';
+      iframe.style.visibility = 'hidden';
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = 'none';
+      document.body.appendChild(iframe);
     }
 
     const itemsHtml = order.items.map(item => `
@@ -975,14 +994,19 @@ export default function App() {
     Centro de Distribuição HORTI<br>
     Separado por: _______________
   </div>
-  <script>
-    window.onload = () => { window.print(); setTimeout(() => window.close(), 500); };
-  </script>
 </body>
 </html>`;
 
-    win.document.write(docContent);
-    win.document.close();
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(docContent);
+    doc.close();
+
+    // Give it a moment to load and then print
+    setTimeout(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    }, 500);
   }, [loadAllOrders]);
 
   useEffect(() => {
@@ -1016,7 +1040,7 @@ export default function App() {
                   <AdminView 
                     orders={orders} 
                     autoPrintEnabled={autoPrintEnabled} 
-                    setAutoPrintEnabled={setAutoPrintEnabled} 
+                    setAutoPrintEnabled={toggleAutoPrint} 
                     printOrder={printOrder} 
                   />
                 } />
